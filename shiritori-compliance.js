@@ -4,8 +4,6 @@ var rules = {
   smallKanaFallbackToPreviousKanaIsValid: true
 };
 
-console.log(areWordsShiritoriCompliant(bef, aft));
-
 function areWordsShiritoriCompliant (bef, aft) {
   var befHira = rmDakutenAndCapsSmallVowels(convertToHiragana(bef));
   var aftHira = rmDakutenAndCapsSmallVowels(convertToHiragana(aft));
