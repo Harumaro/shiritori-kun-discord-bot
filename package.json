@@ -1,0 +1,15 @@
+{
+  "name": "shiritori-kun",
+  "version": "1.0.0",
+  "description": "A discord bot for playing the shiritori game.",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^7.0.1",
+    "firebase": "^3.0.3"
+  }
+}
