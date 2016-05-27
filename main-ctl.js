@@ -2,8 +2,8 @@ var firebase = require('firebase');
 var areWordsShiritoriCompliant = require('./shiritori-compliance.js');
 
 firebase.initializeApp({
-  serviceAccount: __dirname + '/shiritori-kun-332ae0b49b2d.json',
-  databaseURL: 'https://shiritori-kun.firebaseio.com/'
+  serviceAccount: __dirname + '/firebase-auth.json',
+  databaseURL: 'https://dbname.firebaseio.com/'
 });
 
 var db = firebase.database();
