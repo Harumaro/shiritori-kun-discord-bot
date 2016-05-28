@@ -16,7 +16,7 @@ function areWordsShiritoriCompliant (bef, aft) {
     (isLongVowel && convertLongVowelSignToVowel(befHira[befHira.length - 2]).charCodeAt(0) === aftHira.charCodeAt(0)) ||
     (rules.smallKanaFallbackToPreviousKanaIsValid && isSmallKana && befHira.charCodeAt(befHira.length - 2) === aftHira.charCodeAt(0) && befHira.charCodeAt(befHira.length - 1) === aftHira.charCodeAt(1)) ||
     (rules.longVowelFallbackToPreviousKanaIsValid && isLongVowel && befHira.charCodeAt(befHira.length - 2) === aftHira.charCodeAt(0)) ||
-    (rules.allowNKana && endsInNG && ['ん', 'な', 'に', 'ぬ', 'ね', 'の'].indexOf(aftHira.charCodeAt(0)))) {
+    (rules.allowNKana && endsInNG && ['ん', 'な', 'に', 'ぬ', 'ね', 'の'].indexOf(aftHira[0]))) {
     return true;
   }
 
