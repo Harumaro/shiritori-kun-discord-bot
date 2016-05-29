@@ -22,6 +22,7 @@ firebase.initializeApp({
 - .reset: cleans the whole database of words
 
 **Customization**:
+
 First lines in [shiritori-compliance.js](https://github.com/Harumaro/shiritori-kun/blob/master/shiritori-compliance.js) define the rules accepted in your game.
 
 So far you can choose to:
@@ -30,4 +31,5 @@ So far you can choose to:
 - when words end in a 拗音 (contracted sound), allow the next word whether it starts with the entire contracted sound or with や,ゆ or よ by setting the _smallKanaFallbackToPreviousKanaIsValid_ flag to true; alternatively set it to false to only accept や,ゆ or よ as the next word starting syllable.
 
 **Future developments**:
+
 TBD.
