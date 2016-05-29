@@ -22,4 +22,9 @@ bot.on('message', function (message) {
   }
 });
 
+bot.on('disconnected', function () {
+  console.log(mainCtl.getTime() + ' bot disconnected. Reconnecting.');
+  bot.loginWithToken(_token);
+});
+
 bot.loginWithToken(_token);
