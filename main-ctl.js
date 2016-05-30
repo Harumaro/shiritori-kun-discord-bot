@@ -2,8 +2,8 @@ var firebase = require('firebase');
 var areWordsShiritoriCompliant = require('./shiritori-compliance.js');
 
 firebase.initializeApp({
-  serviceAccount: __dirname + '/firebase-auth.json',
-  databaseURL: 'https://dbname.firebaseio.com/'
+  serviceAccount: __dirname + '/shiritori-kun-test-a3e2dd03d064.json',
+  databaseURL: 'https://shiritori-kun-test.firebaseio.com/'
 });
 
 var db = firebase.database();
@@ -142,7 +142,11 @@ function handleJapaneseWord (message) {
     console.log(getTime() + message.author.username + ' -> Japanese word detected in server: ' + message.channel.server.id + ' #' + message.channel.name);
 
     ref.child(message.channel.server.id + '/' + detectedWord[1]).once('value', function (snap) {
-      if (snap.exists()) {
+      var word = detectedWord[1];
+      var reading = detectedWord[2] || detectedWord[1];
+      var meaning = detectedWord[3];
+
+      if (snap.exists() && (snap.child('reading').val() == reading || (snap.hasChild('alt_readings') && snap.child('alt_readings').val().indexOf(reading) !== -1))) {
         var lastWordFound = snap.val();
         lastWordFound.word = snap.key;
         console.log(getTime() + message.author.username + ' -> Word found on database: ' + lastWordFound.word);
@@ -152,26 +156,24 @@ function handleJapaneseWord (message) {
             var key = Object.keys(snap.val())[0];
             var row = snap.val()[key];
             row.word = key;
-            bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Reading: ' + lastWordFound.reading +
-              ' Meaning: ' + lastWordFound.meaning + ' ].\nLast word: ' + row.word + ' [ Reading: ' + row.reading + ' Meaning: ' + row.meaning + ' ].');
+            bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Readings: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
+              ' Meaning: ' + lastWordFound.meaning + ' ].\nLast word: ' + row.word + ' [ Reading: ' + (row.alt_readings ? row.alt_readings[row.alt_readings.length - 1] : row.reading) + ' Meaning: ' + row.meaning + ' ].');
           } else {
-            bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Reading: ' + lastWordFound.reading +
+            bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Reading: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
               ' Meaning: ' + lastWordFound.meaning + ' ].');
           }
         });
       } else {
-        var word = detectedWord[1];
-        var reading = detectedWord[2] || detectedWord[1];
-        var meaning = detectedWord[3];
-
+        var isAltReading = snap.exists() && snap.child('reading').val() != reading;
         ref.child(message.channel.server.id).orderByChild('order').limitToLast(1).once('value', function (snap) {
           var order = 1;
           if (snap.exists()) {
             var key = Object.keys(snap.val())[0];
-            order = snap.val()[key].order + 1;
             var previousWord = snap.val()[key];
+            order = previousWord.order + 1;
+            var previousWordLastAlt = snap.hasChild(word + '/alt_readings') ? snap.child(word + '/alt_readings').val()[snap.child(word + '/alt_readings').numChildren() - 1] : null;
           }
-          if (!snap.exists() || areWordsShiritoriCompliant(previousWord.reading, reading)) {
+          if (!snap.exists() || areWordsShiritoriCompliant(previousWord.reading, reading) || (previousWordLastAlt && areWordsShiritoriCompliant(previousWordLastAlt, reading))) {
             ref.transaction(function (words) {
               if (!words) {
                 var words = {};
@@ -188,14 +190,20 @@ function handleJapaneseWord (message) {
                   server_id: message.channel.server.id
                 };
               }
+              if (isAltReading) {
+                if (!words[message.channel.server.id][word]['alt_readings']) {
+                  words[message.channel.server.id][word]['alt_readings'] = [];
+                }
+                words[message.channel.server.id][word]['alt_readings'].push(reading);
+              }
               return words;
             }, function (error, committed, snapshot) {
-              if (!error) {
+              if (!error && committed) {
                 console.log(getTime() + message.author.username + ' -> Japanese word added to db: ' + word + ', ' + reading + ', ' + meaning);
               }
             });
           } else {
-            bot.sendMessage(message.channel, 'Word ' + word + ' not allowed, \nPrevious word: ' + previousWord.spelling + ' [ Reading: ' + previousWord.reading + ' Meaning: ' + previousWord.meaning + ' ].');
+            bot.sendMessage(message.channel, 'Word ' + word + ' not allowed. \nPrevious word: ' + previousWord.spelling + ' [ Reading: ' + previousWord.reading + (previousWord.alt_readings ? ', ' + previousWord.alt_readings.join(', ') : '') + ' Meaning: ' + previousWord.meaning + ' ].');
           }
         });
       }
