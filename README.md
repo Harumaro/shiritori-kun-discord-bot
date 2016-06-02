@@ -32,4 +32,4 @@ So far you can choose to:
 
 **Future developments**:
 
-TBD.
+Match words on dictionary.
