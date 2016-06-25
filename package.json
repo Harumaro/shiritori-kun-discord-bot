@@ -21,8 +21,11 @@
     "url": "https://github.com/Harumaro/shiritori-kun-discord-bot/issues"
   },
   "homepage": "https://github.com/Harumaro/shiritori-kun-discord-bot",
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "discord.js": "^7.0.1",
+    "dotenv": "^2.0.0",
     "firebase": "^3.0.3"
   }
 }

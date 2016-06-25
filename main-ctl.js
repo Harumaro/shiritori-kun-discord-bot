@@ -1,9 +1,11 @@
+require('dotenv').config({path: __dirname + '/.env'});
+
 var firebase = require('firebase');
 var areWordsShiritoriCompliant = require('./shiritori-compliance.js');
 
 firebase.initializeApp({
-  serviceAccount: __dirname + '/firebase-auth.json',
-  databaseURL: 'https://dbname.firebaseio.com/'
+  serviceAccount: __dirname + '/db_auth/' + process.env.DB_JSON,
+  databaseURL: process.env.DB_URL
 });
 
 var db = firebase.database();

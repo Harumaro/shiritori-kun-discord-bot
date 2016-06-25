@@ -3,17 +3,14 @@
 
 **Configuration**:
 
-You need to add your discord app token in [index.js#5](https://github.com/Harumaro/shiritori-kun/blob/master/index.js#L5)
+You need to add your discord app token and set up the connection to your own firebase in [.env#1](https://github.com/Harumaro/shiritori-kun-discord-bot/blob/master/.env_example#L5)
 ```
-var _token = 'insert-discord-bot-token-here';
+BOT_TOKEN=insert-discord-bot-token-here
+DB_URL=https://dbname.firebaseio.com/
+DB_JSON=firebase-auth.json
+var _token = '';
 ```
-and set up the connection to your own firebase in [main-ctl.js#4](https://github.com/Harumaro/shiritori-kun/blob/master/main-ctl.js#L4)
-```
-firebase.initializeApp({
-  serviceAccount: __dirname + '/firebase-auth.json',
-  databaseURL: 'https://dbname.firebaseio.com/'
-});
-```
+You need to place your json credentials in the db_auth folder of the project.
 
 **Usage**:
 - **word-in-kanji[i.e.: 漢字]** **word-in-kana[i.e.: かんじ]** *translation[i.e.: chinese character]*: inserts a new word in the database, accepts both half-width and full-width space between characters.
@@ -23,7 +20,7 @@ firebase.initializeApp({
 
 **Customization**:
 
-First lines in [shiritori-compliance.js](https://github.com/Harumaro/shiritori-kun/blob/master/shiritori-compliance.js) define the rules accepted in your game.
+First lines in [shiritori-compliance.js](https://github.com/Harumaro/shiritori-kun-discord-bot/blob/master/shiritori-compliance.js) define the rules accepted in your game.
 
 So far you can choose to:
 - when words end in the long vowel sign, allow also words starting with the previous syllable by setting the _longVowelFallbackToPreviousKanaIsValid_ flag to true; alternatively disallow this behaviour by setting it to false, in this case only words starting by vowels will be allowed.
