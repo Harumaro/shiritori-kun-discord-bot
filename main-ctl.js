@@ -12,6 +12,9 @@ var db = firebase.database();
 var ref = db.ref('words');
 var bot;
 
+var reJapaneseWord = /^([\u3005\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]*(?:\s+)(?![\u0020-\u3000\ua000-\uffff\uff01-\uff5e]+)|[\u3040-\u309f\u30a0-\u30ff]+(?:\s*))([\u3040-\u309f\u30a0-\u30ff]*)?\s*([\u0020-\u3000\ua000-\uffff\uff01-\uff5e\s]+)$/;
+var reAnyJapaneseWord = /^([\u3005\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf])/;
+
 function MainCtl (appBot) {
   bot = appBot;
 }
@@ -139,7 +142,7 @@ function getTime () {
 
 function handleJapaneseWord (message) {
   // detect any japanese word at the beginning of a sentence
-  var detectedWord = message.content.match(/^([\u3005\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]+)[\u3000-\u3004\u3006-\u303f ]*([\u3040-\u309f\u30a0-\u30ff]+)*[\u3000-\u3004\u3006-\u303f ]*(.*)/);
+  var detectedWord = message.content.match(reJapaneseWord);
   if (detectedWord) {
     console.log(getTime() + message.author.username + ' -> Japanese word detected in server: ' + message.channel.server.id + ' #' + message.channel.name);
 
@@ -210,6 +213,8 @@ function handleJapaneseWord (message) {
         });
       }
     });
+  } else if(reAnyJapaneseWord.test(message.content)) {
+    bot.sendMessage(message.channel, 'Wrong syntax: expecting either `word-in-kanji word-in-kana translation` or `word-in-kana translation`');
   }
 }
 
