@@ -71,4 +71,7 @@ function convertLongVowelSignToVowel (beforeSign) {
   return convertedWord;
 }
 
-module.exports = areWordsShiritoriCompliant;
+module.exports = {
+  areWordsShiritoriCompliant: areWordsShiritoriCompliant,
+  convertToHiragana: convertToHiragana
+};

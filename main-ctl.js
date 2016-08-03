@@ -1,7 +1,8 @@
 require('dotenv').config({path: __dirname + '/.env'});
 
 var firebase = require('firebase');
-var areWordsShiritoriCompliant = require('./shiritori-compliance.js');
+var areWordsShiritoriCompliant = require(__dirname + '/shiritori-compliance.js').areWordsShiritoriCompliant;
+var convertToHiragana = require(__dirname + '/shiritori-compliance.js').convertToHiragana;
 
 firebase.initializeApp({
   serviceAccount: __dirname + '/db_auth/' + process.env.DB_JSON,
@@ -160,11 +161,39 @@ function handleJapaneseWord (message) {
 
     ref.child(message.channel.server.id + '/' + detectedWord[1]).once('value')
       .then(function (snap) {
-        var word = detectedWord[1];
-        var reading = detectedWord[2] || detectedWord[1];
+        var word = detectedWord[1] || detectedWord[2];
+        var reading = convertToHiragana(detectedWord[2]);
         var meaning = detectedWord[3];
 
-        if (snap.exists() && (snap.child('reading').val() == reading || (snap.hasChild('alt_readings') && snap.child('alt_readings').val().indexOf(reading) !== -1))) {
+        var foundDuplicate = false;
+
+        if (convertToHiragana(word) === reading) {
+          ref.child(message.channel.server.id + '/' + convertToHiragana(word)).once('value')
+            .then(function (snap) {
+              if (snap.exists() && (snap.child('reading').val() == reading || (snap.hasChild('alt_readings') && snap.child('alt_readings').val().indexOf(reading) !== -1))) {
+                foundDuplicate = true;
+                var lastWordFound = snap.val();
+                lastWordFound.word = snap.key;
+                console.log(getTime() + message.author.username + ' -> Word found on database: ' + lastWordFound.word);
+
+                ref.child(message.channel.server.id).orderByChild('order').limitToLast(1).once('value')
+                  .then(function (snap) {
+                    if (snap.exists()) {
+                      var key = Object.keys(snap.val())[0];
+                      var row = snap.val()[key];
+                      row.word = key;
+                      bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Readings: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
+                        ' Meaning: ' + lastWordFound.meaning + ' ].\nLast word: ' + row.word + ' [ Reading: ' + (row.alt_readings ? row.alt_readings[row.alt_readings.length - 1] : row.reading) + ' Meaning: ' + row.meaning + ' ].');
+                    } else {
+                      bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Reading: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
+                        ' Meaning: ' + lastWordFound.meaning + ' ].');
+                    }
+                  });
+              }
+            });
+        }
+
+        if (!foundDuplicate && snap.exists() && (snap.child('reading').val() == reading || (snap.hasChild('alt_readings') && snap.child('alt_readings').val().indexOf(reading) !== -1))) {
           var lastWordFound = snap.val();
           lastWordFound.word = snap.key;
           console.log(getTime() + message.author.username + ' -> Word found on database: ' + lastWordFound.word);
@@ -222,7 +251,7 @@ function handleJapaneseWord (message) {
                     console.log(getTime() + message.author.username + ' -> Japanese word added to db: ' + word + ', ' + reading + ', ' + meaning);
                   }
                 });
-              } else {
+              } else if(!foundDuplicate) {
                 bot.sendMessage(message.channel, 'Word ' + word + ' not allowed. \nPrevious word: ' + previousWord.spelling + ' [ Reading: ' + previousWord.reading + (previousWord.alt_readings ? ', ' + previousWord.alt_readings.join(', ') : '') + ' Meaning: ' + previousWord.meaning + ' ].');
               }
             });

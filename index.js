@@ -1,7 +1,7 @@
 require('dotenv').config({path: __dirname + '/.env'});
 
 var Discord = require('discord.js');
-var MainCtl = require('./main-ctl.js');
+var MainCtl = require(__dirname + '/main-ctl.js');
 
 var bot = new Discord.Client();
 var mainCtl = new MainCtl(bot);
