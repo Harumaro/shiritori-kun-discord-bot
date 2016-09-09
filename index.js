@@ -20,7 +20,7 @@ bot.on('ready', () => {
 });
 
 bot.on('message', (message) => {
-  if (message.channel.name == 'bot-playground') {
+  if (message.channel.name == process.env.BOT_CHANNEL) {
     if (message.content[0] == '.') {
       mainCtl.handleCommand(message, message.content.substring(1));
     }
