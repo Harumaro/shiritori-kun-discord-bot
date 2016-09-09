@@ -7,20 +7,20 @@ var bot = new Discord.Client();
 var mainCtl = new MainCtl(bot);
 
 function stopBot () {
-  bot.destroy((err) => {
-    process.exit()
+  bot.destroy().then((err) => {
+    process.exit();
   });
 }
 
 bot.on('ready', () => {
   console.log('Ready!');
-  console.log('Servers joined: ' + bot.servers.map(function (server) {
+  console.log('Servers joined: ' + bot.guilds.map(function (server) {
       return server.name + ',' + server.id + ';';
     }));
 });
 
 bot.on('message', (message) => {
-  if (message.channel.name == 'shiritori') {
+  if (message.channel.name == 'bot-playground') {
     if (message.content[0] == '.') {
       mainCtl.handleCommand(message, message.content.substring(1));
     }
@@ -31,10 +31,10 @@ bot.on('message', (message) => {
 
 bot.on('disconnected', () => {
   console.log(mainCtl.getTime() + ' bot disconnected. Reconnecting.');
-  bot.loginWithToken(process.env.BOT_TOKEN);
+  bot.login(process.env.BOT_TOKEN);
 });
 
-bot.loginWithToken(process.env.BOT_TOKEN);
+bot.login(process.env.BOT_TOKEN);
 
 process.on('SIGINT', stopBot);
 process.on('SIGTERM', stopBot);

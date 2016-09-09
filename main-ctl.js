@@ -32,14 +32,14 @@ var commands = [
     parameters: ['word'],
     permissions: ['serverop', 'resident'],
     execute: function (message, params) {
-      if (message.channel.server) {
-        ref.child(message.channel.server.id + '/' + params[1]).remove()
+      if (message.guild) {
+        ref.child(message.guild.id + '/' + params[1]).remove()
           .then(function () {
             console.log(getTime() + message.author.username + ' -> Japanese word removed from db: ' + params[1]);
-            bot.sendMessage(message.channel, 'Japanese word removed from db: ' + params[1]);
+            message.channel.sendMessage('Japanese word removed from db: ' + params[1]);
           })
           .catch(function (error) {
-            bot.sendMessage(message.channel, 'Word not in database: ' + params[1]);
+            message.channel.sendMessage('Word not in database: ' + params[1]);
           });
       }
     }
@@ -51,13 +51,13 @@ var commands = [
     permissions: ['serverop'],
     execute: function (message, params) {
       if (params[1] == 'force') {
-        ref.child(message.channel.server.id).remove()
+        ref.child(message.guild.id).remove()
           .then(function (error) {
             console.log(getTime() + message.author.username + ' -> Database of words reseted.');
-            bot.sendMessage(message.channel, 'Database of words reseted.');
+            message.channel.sendMessage('Database of words reseted.');
           })
           .catch(function (error) {
-            bot.sendMessage(message.channel, 'Could not reset.');
+            message.channel.sendMessage('Could not reset.');
           });
       }
     }
@@ -68,9 +68,19 @@ var commands = [
     parameters: [],
     permissions: ['resident'],
     execute: function (message, params) {
-      ref.child(message.channel.server.id).once('value')
+      ref.child(message.guild.id).once('value')
         .then(function (snap) {
-          bot.sendMessage(message.channel, 'Total words in database: ' + snap.numChildren());
+          message.channel.sendMessage('Total words in database: ' + snap.numChildren());
+
+          ref.child(message.guild.id).orderByChild('order').limitToLast(1).once('value')
+            .then(function (snap) {
+              if (snap.exists()) {
+                var key = Object.keys(snap.val())[0];
+                var row = snap.val()[key];
+                row.word = key;
+                message.channel.sendMessage('Last word processed: ' + row.word + ' [ Reading: ' + (row.alt_readings ? row.alt_readings[row.alt_readings.length - 1] : row.reading) + ' Meaning: ' + row.meaning + ' ].');
+              }
+            });
         });
     }
   },
@@ -80,7 +90,7 @@ var commands = [
     parameters: [],
     permissions: ['resident'],
     execute: function (message, params) {
-      bot.sendMessage(message.channel, 'Pong.');
+      message.channel.sendMessage('Pong.');
     }
   }
 ];
@@ -93,14 +103,8 @@ function hasPermission (server, user, command) {
   }
 
   if (server) {
-    for (i in bot.servers) {
-      var userRoles = bot.servers.get('id', server.id).rolesOfUser(user);
-
-      for (var i = 0; i < userRoles.length; i++) {
-        if (permissions.findIndex((el) => el === userRoles[i].name.toLowerCase()) !== -1) {
-          return true;
-        }
-      }
+    if (permissions.findIndex((el) => server.members.find('id', user.id).roles.exists('name', el.toLowerCase())) !== -1) {
+      return true;
     }
   }
 
@@ -123,10 +127,10 @@ function handleCommand (message, command) {
   var com = searchCommand(params[0]);
 
   if (com) {
-    if (!hasPermission(message.channel.server, message.author, com)) {
-      bot.reply(message, "Sorry, you don't have the permission to use that command.");
+    if (!hasPermission(message.guild, message.author, com)) {
+      message.reply("Sorry, you don't have the permission to use that command.");
     } else if (params.length - 1 < com.parameters.length) {
-      bot.reply(message, 'Insufficient parameters. This command accepts ' + com.parameters.length + ' parameters: ' + com.parameters.join());
+      message.reply('Insufficient parameters. This command accepts ' + com.parameters.length + ' parameters: ' + com.parameters.join());
     } else {
       com.execute(message, params);
     }
@@ -140,8 +144,8 @@ function handleCommand (message, command) {
       availableCommands += ' => ' + commands[i].description + ' Available to: ' + commands[i].permissions.join() + '\n';
     }
 
-    bot.reply(message, 'Unknown command: "' + params[0] + '"');
-    bot.sendMessage(message.channel, 'List of available commands:\n' + availableCommands);
+    message.reply('Unknown command: "' + params[0] + '"');
+    message.channel.sendMessage('List of available commands:\n' + availableCommands);
   }
 }
 
@@ -157,9 +161,9 @@ function handleJapaneseWord (message) {
   // detect any japanese word at the beginning of a sentence
   var detectedWord = message.content.match(reJapaneseWord);
   if (detectedWord) {
-    console.log(getTime() + message.author.username + ' -> Japanese word detected in server: ' + message.channel.server.id + ' #' + message.channel.name);
+    console.log(getTime() + message.author.username + ' -> Japanese word detected in server: ' + message.guild.id + ' #' + message.channel.name);
 
-    ref.child(message.channel.server.id + '/' + detectedWord[1]).once('value')
+    ref.child(message.guild.id + '/' + detectedWord[1]).once('value')
       .then(function (snap) {
         var word = detectedWord[1] || detectedWord[2];
         var reading = convertToHiragana(detectedWord[2]);
@@ -168,7 +172,7 @@ function handleJapaneseWord (message) {
         var foundDuplicate = false;
 
         if (convertToHiragana(word) === reading) {
-          ref.child(message.channel.server.id + '/' + convertToHiragana(word)).once('value')
+          ref.child(message.guild.id + '/' + convertToHiragana(word)).once('value')
             .then(function (snap) {
               if (snap.exists() && (snap.child('reading').val() == reading || (snap.hasChild('alt_readings') && snap.child('alt_readings').val().indexOf(reading) !== -1))) {
                 foundDuplicate = true;
@@ -176,16 +180,16 @@ function handleJapaneseWord (message) {
                 lastWordFound.word = snap.key;
                 console.log(getTime() + message.author.username + ' -> Word found on database: ' + lastWordFound.word);
 
-                ref.child(message.channel.server.id).orderByChild('order').limitToLast(1).once('value')
+                ref.child(message.guild.id).orderByChild('order').limitToLast(1).once('value')
                   .then(function (snap) {
                     if (snap.exists()) {
                       var key = Object.keys(snap.val())[0];
                       var row = snap.val()[key];
                       row.word = key;
-                      bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Readings: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
+                      message.channel.sendMessage('Word ' + lastWordFound.word + ' already used [ Readings: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
                         ' Meaning: ' + lastWordFound.meaning + ' ].\nLast word: ' + row.word + ' [ Reading: ' + (row.alt_readings ? row.alt_readings[row.alt_readings.length - 1] : row.reading) + ' Meaning: ' + row.meaning + ' ].');
                     } else {
-                      bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Reading: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
+                      message.channel.sendMessage('Word ' + lastWordFound.word + ' already used [ Reading: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
                         ' Meaning: ' + lastWordFound.meaning + ' ].');
                     }
                   });
@@ -198,22 +202,22 @@ function handleJapaneseWord (message) {
           lastWordFound.word = snap.key;
           console.log(getTime() + message.author.username + ' -> Word found on database: ' + lastWordFound.word);
 
-          ref.child(message.channel.server.id).orderByChild('order').limitToLast(1).once('value')
+          ref.child(message.guild.id).orderByChild('order').limitToLast(1).once('value')
             .then(function (snap) {
               if (snap.exists()) {
                 var key = Object.keys(snap.val())[0];
                 var row = snap.val()[key];
                 row.word = key;
-                bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Readings: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
+                message.channel.sendMessage('Word ' + lastWordFound.word + ' already used [ Readings: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
                   ' Meaning: ' + lastWordFound.meaning + ' ].\nLast word: ' + row.word + ' [ Reading: ' + (row.alt_readings ? row.alt_readings[row.alt_readings.length - 1] : row.reading) + ' Meaning: ' + row.meaning + ' ].');
               } else {
-                bot.sendMessage(message.channel, 'Word ' + lastWordFound.word + ' already used [ Reading: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
+                message.channel.sendMessage('Word ' + lastWordFound.word + ' already used [ Reading: ' + lastWordFound.reading + (lastWordFound.alt_readings ? ', ' + lastWordFound.alt_readings.join(', ') : '') +
                   ' Meaning: ' + lastWordFound.meaning + ' ].');
               }
             });
         } else {
           var isAltReading = snap.exists() && snap.child('reading').val() != reading;
-          ref.child(message.channel.server.id).orderByChild('order').limitToLast(1).once('value')
+          ref.child(message.guild.id).orderByChild('order').limitToLast(1).once('value')
             .then(function (snap) {
               var order = 1;
               if (snap.exists()) {
@@ -227,23 +231,23 @@ function handleJapaneseWord (message) {
                   if (!words) {
                     var words = {};
                   }
-                  if (!words[message.channel.server.id]) {
-                    words[message.channel.server.id] = {};
+                  if (!words[message.guild.id]) {
+                    words[message.guild.id] = {};
                   }
-                  if (!words[message.channel.server.id][word]) {
-                    words[message.channel.server.id][word] = {
+                  if (!words[message.guild.id][word]) {
+                    words[message.guild.id][word] = {
                       order: order,
                       spelling: word,
                       reading: reading,
                       meaning: meaning,
-                      server_id: message.channel.server.id
+                      server_id: message.guild.id
                     };
                   }
                   if (isAltReading) {
-                    if (!words[message.channel.server.id][word]['alt_readings']) {
-                      words[message.channel.server.id][word]['alt_readings'] = [];
+                    if (!words[message.guild.id][word]['alt_readings']) {
+                      words[message.guild.id][word]['alt_readings'] = [];
                     }
-                    words[message.channel.server.id][word]['alt_readings'].push(reading);
+                    words[message.guild.id][word]['alt_readings'].push(reading);
                   }
                   return words;
                 }, function (error, committed, snapshot) {
@@ -251,14 +255,14 @@ function handleJapaneseWord (message) {
                     console.log(getTime() + message.author.username + ' -> Japanese word added to db: ' + word + ', ' + reading + ', ' + meaning);
                   }
                 });
-              } else if(!foundDuplicate) {
-                bot.sendMessage(message.channel, 'Word ' + word + ' not allowed. \nPrevious word: ' + previousWord.spelling + ' [ Reading: ' + previousWord.reading + (previousWord.alt_readings ? ', ' + previousWord.alt_readings.join(', ') : '') + ' Meaning: ' + previousWord.meaning + ' ].');
+              } else if (!foundDuplicate) {
+                message.channel.sendMessage('Word ' + word + ' not allowed. \nPrevious word: ' + previousWord.spelling + ' [ Reading: ' + previousWord.reading + (previousWord.alt_readings ? ', ' + previousWord.alt_readings.join(', ') : '') + ' Meaning: ' + previousWord.meaning + ' ].');
               }
             });
         }
       });
   } else if (reAnyJapaneseWord.test(message.content)) {
-    bot.sendMessage(message.channel, 'Wrong syntax: expecting either `word-in-kanji word-in-kana translation` or `word-in-kana translation`');
+    message.channel.sendMessage('Wrong syntax: expecting either `word-in-kanji word-in-kana translation` or `word-in-kana translation`');
   }
 }
 
